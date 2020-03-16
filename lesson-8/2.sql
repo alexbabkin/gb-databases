@@ -1,8 +1,8 @@
 USE vk;
 
-SELECT profiles.user_id, MIN(profiles.birthday) as bd, COUNT(*) -- MIN(profiles.birthday) is just birthday, but we need agregation, because we use group by
+SELECT profiles.user_id, MIN(profiles.birthday) as bd, COUNT(likes.created_at) -- MIN(profiles.birthday) is just birthday, but we need agregation, because we use group by
 	FROM profiles 
-	JOIN likes
+	LEFT JOIN likes
 		ON profiles.user_id = likes.target_id
 	JOIN target_types
 		ON likes.target_type_id = target_types.id -- or just likes.target_type_id = 2 if we know id of 'users' row
@@ -19,16 +19,20 @@ SELECT gender, COUNT(*) AS likes_num
 	ORDER BY likes_num DESC LIMIT 1;
 
 
-SELECT users.id, COUNT(*) AS total
+SELECT users.id, 
+	( COUNT(posts.created_at)    * (SELECT weight FROM activity_weight WHERE activity = 'post')    ) +
+	( COUNT(likes.created_at)    * (SELECT weight FROM activity_weight WHERE activity = 'like')    ) + 
+	( COUNT(messages.created_at) * (SELECT weight FROM activity_weight WHERE activity = 'message') ) +
+	( COUNT(media.created_at)    * (SELECT weight FROM activity_weight WHERE activity = 'media')   ) AS total
 	FROM users
 	LEFT JOIN posts 
-		ON users.id = posts.user_id AND posts.user_id IS NOT NULL
+		ON users.id = posts.user_id
 	LEFT JOIN likes 
-		ON users.id = likes.user_id AND likes.user_id IS NOT NULL
+		ON users.id = likes.user_id
 	LEFT JOIN messages 
-		ON users.id = messages.from_user_id AND messages .from_user_id IS NOT NULL
+		ON users.id = messages.from_user_id
 	LEFT JOIN media
-		ON users.id = media.user_id AND media.user_id IS NOT NULL
+		ON users.id = media.user_id
 	GROUP BY users.id
 	ORDER BY total LIMIT 10;
 	
